@@ -1,3 +1,4 @@
+import * as io from 'socket.io-client'
 import * as P5 from 'p5'
 import { Constants } from './constants'
 import { Bomb } from './classes/Bomb'
@@ -13,6 +14,12 @@ let bombs: Bomb[] = []
 
 // set up function
 const setup = (p5: P5) => () => {
+  // open socket connection
+  const HOST: string = location.origin.replace(/^http/, 'ws')
+  const ws: SocketIOClient.Socket = io(HOST)
+  ws.on('message', (message: any) => {
+    console.log('got message!', message)
+  })
   // create canvas
   p5.createCanvas(...c.canvasSize)
   // set background color
