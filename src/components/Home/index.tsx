@@ -1,4 +1,4 @@
-import * as React from 'react'
+import React from 'react'
 import P5Canvas from 'react-p5-wrapper'
 import { sketch } from './sketch'
 
