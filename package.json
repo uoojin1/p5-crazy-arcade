@@ -26,14 +26,14 @@
     "typescript": "^3.7.5"
   },
   "scripts": {
-    "start": "node build/dist/server/index.js",
-    "postinstall": "echo POST INSTALL && npm run build && npm run tsc",
+    "start": "echo START! && node build/dist/server/index.js",
+    "dev:ui": "react-scripts-ts start",
+    "build": "echo BUILD! && react-scripts-ts build && npm run tsc",
+    "test": "react-scripts-ts test --env=jsdom",
+    "postinstall": "echo POST INSTALL! && npm run build && npm run tsc",
     "start:test2": "npm run build && npm run tsc && node --optimize_for_size --max_old_space_size=260 --gc_interval=100 build/dist/server/index.js",
     "start:test": "npm run build && npm run tsc && node --experimental-modules build/dist/server/index.js",
     "dev:server": "nodemon --watch server --ext ts --exec ts-node server/index.ts",
-    "dev:ui": "react-scripts-ts start",
-    "build": "react-scripts-ts build",
-    "test": "react-scripts-ts test --env=jsdom",
     "eject": "react-scripts-ts eject",
     "tsc": "tsc"
   }
