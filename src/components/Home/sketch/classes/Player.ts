@@ -36,7 +36,15 @@ export class Player {
 
   public get y(): number { return this._y }
 
-  public move(direction: DIRECTION) {
+  public set x(value: number) {
+    this._x = value
+  }
+
+  public set y(value: number) {
+    this._y = value
+  }
+
+  public move(direction: DIRECTION, callback: Function) {
     if (direction === DIRECTION.UP) {
       this._y -= this._velocity
     }
@@ -49,5 +57,6 @@ export class Player {
     if (direction === DIRECTION.RIGHT) {
       this._x += this._velocity
     }
+    callback()
   }
 }

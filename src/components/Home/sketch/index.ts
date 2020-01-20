@@ -7,14 +7,16 @@ import { Bomb } from './classes/Bomb'
 // constants
 let c: Constants
 
-let x: number = 50;
-let y: number = 50;
+// let x: number = 50;
+// let y: number = 50;
 
 let bombs: Bomb[] = []
 
 let myCharacter: Player;
 
 let players = {};
+
+let socket: SocketIOClient.Socket
 
 type NewPlayer = {
   x: number,
@@ -32,7 +34,7 @@ type ServerData = {
 const setup = (p5: P5) => () => {
   // open socket connection
   const HOST: string = location.origin.replace(/^http/, 'ws')
-  const socket: SocketIOClient.Socket = io(HOST)
+  socket = io(HOST)
   
   socket.on('player created', ({ allPlayers, yourCharacter }: ServerData) => {
     Object.keys(allPlayers).forEach((key) => {
@@ -54,6 +56,16 @@ const setup = (p5: P5) => () => {
     delete players[id]
   })
 
+  socket.on('player position change', (p: {
+    id: string,
+    x: number,
+    y: number
+  }) => {
+    const updatedPlayer = players[p.id]
+    updatedPlayer.x = p.x;
+    updatedPlayer.y = p.y;
+  })
+
   // create canvas
   p5.createCanvas(...c.canvasSize)
   // set background color
@@ -65,9 +77,7 @@ const setup = (p5: P5) => () => {
 const keyPressed = (p5: P5) => () => {
   // pressed spacebar
   if (p5.keyCode === 32) {
-    console.log(`BOMB @ x: ${x}, y: ${y}`)
     bombs.push(new Bomb(myCharacter.x, myCharacter.y, 2500))
-    console.log('bombs', bombs)
   }
 }
 
@@ -106,6 +116,13 @@ const checkExplosion = (p5: P5): void => {
   }
 }
 
+const sendPositionChangeInformation = (myCharacter: Player) => {
+  socket.emit('send position change', {
+    x: myCharacter.x,
+    y: myCharacter.y
+  })
+}
+
 // function that runs on every new frame
 const draw = (p5: P5) => () => {
   // reset canvas
@@ -113,16 +130,16 @@ const draw = (p5: P5) => () => {
 
   // movement
   if (p5.keyIsDown(p5.LEFT_ARROW)) {
-    myCharacter.move(DIRECTION.LEFT)
+    myCharacter.move(DIRECTION.LEFT, () => sendPositionChangeInformation(myCharacter))
   }
   if (p5.keyIsDown(p5.RIGHT_ARROW)) {
-    myCharacter.move(DIRECTION.RIGHT)
+    myCharacter.move(DIRECTION.RIGHT, () => sendPositionChangeInformation(myCharacter))
   }
   if (p5.keyIsDown(p5.UP_ARROW)) {
-    myCharacter.move(DIRECTION.UP)
+    myCharacter.move(DIRECTION.UP, () => sendPositionChangeInformation(myCharacter))
   }
   if (p5.keyIsDown(p5.DOWN_ARROW)) {
-    myCharacter.move(DIRECTION.DOWN)
+    myCharacter.move(DIRECTION.DOWN, () => sendPositionChangeInformation(myCharacter))
   }
 
   drawBomb(p5)

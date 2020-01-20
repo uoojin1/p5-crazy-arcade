@@ -26,6 +26,15 @@ export function wssController(server: io.Server) {
 
     socket.broadcast.emit('new player joined', player)
 
+    socket.on('message', (data) => { console.log(data) })
+
+    socket.on('send position change', (p: any) => {
+      // need to keep the location of each player from the server
+      console.log('send position change', p)
+      // FIXME: should ignore self
+      socket.broadcast.emit('player position change', { id: socket.id, x: p.x, y: p.y })
+    })
+
     socket.on('disconnect', () => {
       delete players[id]
       socket.broadcast.emit('player disconnected', socket.id)
