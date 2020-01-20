@@ -26,7 +26,9 @@
     "typescript": "^3.7.5"
   },
   "scripts": {
-    "start": "npm run build && npm run tsc && node --optimize_for_size --max_old_space_size=260 --gc_interval=100 build/dist/server/index.js",
+    "start": "node build/dist/server/index.js",
+    "postinstall": "echo POST INSTALL && npm run build && npm run tsc",
+    "start:test2": "npm run build && npm run tsc && node --optimize_for_size --max_old_space_size=260 --gc_interval=100 build/dist/server/index.js",
     "start:test": "npm run build && npm run tsc && node --experimental-modules build/dist/server/index.js",
     "dev:server": "nodemon --watch server --ext ts --exec ts-node server/index.ts",
     "dev:ui": "react-scripts-ts start",
