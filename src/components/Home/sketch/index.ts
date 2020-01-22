@@ -18,9 +18,17 @@ type ServerAllPlayersData = {
   [key: string]: ServerPlayerData
 }
 
+type ServerBomb = {
+  position: Position,
+  plantedTime: number
+}
+
+type ServerBombData = ServerBomb[]
+
 type InitialGameData = {
   allPlayers: ServerAllPlayersData,
-  yourCharacter: ServerPlayerData
+  yourCharacter: ServerPlayerData,
+  bombsData: ServerBombData
 }
 
 type Players = {[key: string]: Player}
@@ -33,7 +41,7 @@ const setup = (p5: P5) => () => {
   const HOST: string = location.origin.replace(/^http/, 'ws')
   socket = io(HOST)
   
-  socket.on('initialized game for the new user', ({ allPlayers, yourCharacter }: InitialGameData) => {
+  socket.on('initialized game for the new user', ({ allPlayers, yourCharacter, bombsData }: InitialGameData) => {
     // create all players
     Object.keys(allPlayers).forEach((key) => {
       const { id, position, color, keysPressed } = allPlayers[key]
@@ -43,6 +51,12 @@ const setup = (p5: P5) => () => {
     const { id, position, color, keysPressed } = yourCharacter
     myCharacter = new Player(p5, id, position, color, keysPressed)
     players[id] = myCharacter
+    // create existing bombs
+    bombsData.forEach((bomb) => {
+      const { position, plantedTime } = bomb
+      const untilExplosion = 2500 - (Date.now() - plantedTime)
+      bombs.push(new Bomb(position.x, position.y, untilExplosion))
+    })
   })
 
   socket.on('new player has joined', (newPlayer: ServerPlayerData) => {
@@ -65,14 +79,9 @@ const setup = (p5: P5) => () => {
     players[data.id].syncWithServer(data.keysPressed, data.position)
   })
 
-  socket.on('player position change', (p: {
-    id: string,
-    x: number,
-    y: number
-  }) => {
-    const updatedPlayer = players[p.id]
-    updatedPlayer.x = p.x;
-    updatedPlayer.y = p.y;
+  socket.on('bomb placed', (bomb: ServerBomb) => {
+    const untilExplosion = 2500 - (Date.now() - bomb.plantedTime)
+    bombs.push(new Bomb(bomb.position.x, bomb.position.y, untilExplosion))
   })
 
   // create canvas
@@ -92,7 +101,7 @@ const reportKeysPressedChange = () => {
 
 const keyPressed = (p5: P5) => () => {
   const keyCode = p5.keyCode
-  if ([38, 40, 37, 39].includes(keyCode)) {
+  if ([38, 40, 37, 39, 32].includes(keyCode)) {
     if (p5.keyCode === 38) {
       myCharacter.updateKeysPressed('u', true)
     }
@@ -107,6 +116,15 @@ const keyPressed = (p5: P5) => () => {
     }
     if (p5.keyCode === 32) {
       // bomb
+      console.log('bomb placing')
+      const currentTime = Date.now()
+      // place the bomb on the canvas
+      bombs.push(new Bomb(myCharacter.x, myCharacter.y, 2500))
+      // send server this information to the server
+      socket.emit('report: bomb placed', {
+        position: myCharacter.position,
+        plantedTime: currentTime
+      })
     }
     reportKeysPressedChange()
   }

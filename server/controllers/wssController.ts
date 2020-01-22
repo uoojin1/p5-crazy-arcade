@@ -11,6 +11,10 @@ export function wssController(server: io.Server) {
     socket.on('report: keysPressed changed', (data) => {
       gameManager.handleKeysPressedChange(socket, data)
     })
+    // register bomb handler
+    socket.on('report: bomb placed', (data) => {
+      gameManager.handleBombPlaced(socket, data)
+    })
 
     // register a handler for a disconnect event
     socket.on('disconnect', () => gameManager.removePlayer(socket))

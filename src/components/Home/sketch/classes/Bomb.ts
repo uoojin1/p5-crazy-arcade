@@ -9,7 +9,7 @@ export class Bomb extends GameObject {
    * @param y y position of the bomb
    * @param untilExplostion time left until explosion in milliseconds
    */
-  constructor(x: number, y: number, untilExplostion: number) {
+  constructor(x: number, y: number, untilExplostion: number = 2500) {
     // set position
     const position: Position = { x, y }
     super(position)

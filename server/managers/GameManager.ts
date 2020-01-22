@@ -30,13 +30,21 @@ type PlayersList = {
   [key: string]: Player
 }
 
+type Bomb = {
+  position: Position,
+  plantedTime: number
+}
+
 export class GameManager {
   // list (map) of all players
   private playersList: PlayersList
+  private bombs: Bomb[];
 
   public constructor() {
     // initialize the players list to an empty map
     this.playersList = {}
+    // initialize the bomb list to an empty array
+    this.bombs = []
   }
 
   /**
@@ -54,7 +62,8 @@ export class GameManager {
     // give the initial settings to the new user
     socket.emit('initialized game for the new user', {
       allPlayers: this.playersList,
-      yourCharacter: newPlayer
+      yourCharacter: newPlayer,
+      bombsData: this.bombs
     })
     // broadcast the new user's entry to all users
     socket.broadcast.emit('new player has joined', newPlayer)
@@ -80,6 +89,13 @@ export class GameManager {
       id: socket.id,
       ...data
     })
+  }
+
+  public handleBombPlaced(socket: io.Socket, bomb: Bomb) {
+    // push the bomb to the bombs list
+    this.bombs.push(bomb)
+    // broadcast this information
+    socket.broadcast.emit('bomb placed', bomb)
   }
 
   private addPlayerToList(player: Player) {
