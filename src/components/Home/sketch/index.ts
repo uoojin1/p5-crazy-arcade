@@ -1,34 +1,31 @@
 import io from 'socket.io-client'
 import P5 from 'p5'
 import { Constants } from './constants'
-import { Player, DIRECTION } from './classes/Player'
+import {
+  Player, ServerPlayerData, KeysPressed, Position, DIRECTION } from './classes/Player'
 import { Bomb } from './classes/Bomb'
 
 // constants
 let c: Constants
 
-// let x: number = 50;
-// let y: number = 50;
-
 let bombs: Bomb[] = []
 
 let myCharacter: Player;
 
-let players = {};
-
 let socket: SocketIOClient.Socket
 
-type NewPlayer = {
-  x: number,
-  y: number,
-  id: string,
-  color: [number, number, number]
+type ServerAllPlayersData = {
+  [key: string]: ServerPlayerData
 }
 
-type ServerData = {
-  allPlayers: Object
-  yourCharacter: NewPlayer
+type InitialGameData = {
+  allPlayers: ServerAllPlayersData,
+  yourCharacter: ServerPlayerData
 }
+
+type Players = {[key: string]: Player}
+
+let players: Players = {};
 
 // set up function
 const setup = (p5: P5) => () => {
@@ -36,24 +33,36 @@ const setup = (p5: P5) => () => {
   const HOST: string = location.origin.replace(/^http/, 'ws')
   socket = io(HOST)
   
-  socket.on('player created', ({ allPlayers, yourCharacter }: ServerData) => {
+  socket.on('initialized game for the new user', ({ allPlayers, yourCharacter }: InitialGameData) => {
+    // create all players
     Object.keys(allPlayers).forEach((key) => {
-      const { id, x, y, color } = allPlayers[key]
-      players[id] = new Player(p5, id, x, y, color)
+      const { id, position, color, keysPressed } = allPlayers[key]
+      players[id] = new Player(p5, id, position, color, keysPressed)
     })
-    const { id, x, y, color } = yourCharacter
-    myCharacter = new Player(p5, id, x, y, color)
+    // create your character
+    const { id, position, color, keysPressed } = yourCharacter
+    myCharacter = new Player(p5, id, position, color, keysPressed)
     players[id] = myCharacter
   })
 
-  socket.on('new player joined', (newPlayer: NewPlayer) => {
-    const { id, x, y, color } = newPlayer
-    players[id] = new Player(p5, id, x, y, color)
+  socket.on('new player has joined', (newPlayer: ServerPlayerData) => {
+    console.log('new player has joined', newPlayer.id)
+    const { id, position, color, keysPressed } = newPlayer
+    players[id] = new Player(p5, id, position, color, keysPressed)
   })
 
   socket.on('player disconnected', (id: string) => {
     console.log('disconnected~')
     delete players[id]
+  })
+
+  socket.on('pressedKeys changed', (data: {
+    id: string,
+    keysPressed: KeysPressed,
+    position: Position
+  }) => {
+    // synchronize the user's position and the keysPressed with the server data
+    players[data.id].syncWithServer(data.keysPressed, data.position)
   })
 
   socket.on('player position change', (p: {
@@ -74,12 +83,53 @@ const setup = (p5: P5) => () => {
   p5.frameRate(40)
 }
 
+const reportKeysPressedChange = () => {
+  socket.emit('report: keysPressed changed', {
+    keysPressed: myCharacter.keysPressed,
+    position: myCharacter.position
+  })
+}
+
 const keyPressed = (p5: P5) => () => {
-  // pressed spacebar
-  if (p5.keyCode === 32) {
-    bombs.push(new Bomb(myCharacter.x, myCharacter.y, 2500))
+  const keyCode = p5.keyCode
+  if ([38, 40, 37, 39].includes(keyCode)) {
+    if (p5.keyCode === 38) {
+      myCharacter.updateKeysPressed('u', true)
+    }
+    if (p5.keyCode === 40) {
+      myCharacter.updateKeysPressed('d', true)
+    }
+    if (p5.keyCode === 37) {
+      myCharacter.updateKeysPressed('l', true)
+    }
+    if (p5.keyCode === 39) {
+      myCharacter.updateKeysPressed('r', true)
+    }
+    if (p5.keyCode === 32) {
+      // bomb
+    }
+    reportKeysPressedChange()
   }
 }
+
+const keyReleased = (p5: P5) => () => {
+  const keyCode = p5.keyCode
+  if ([38, 40, 37, 39].includes(keyCode)) {
+    if (p5.keyCode === 38) {
+      myCharacter.updateKeysPressed('u', false)
+    }
+    if (p5.keyCode === 40) {
+      myCharacter.updateKeysPressed('d', false)
+    }
+    if (p5.keyCode === 37) {
+      myCharacter.updateKeysPressed('l', false)
+    }
+    if (p5.keyCode === 39) {
+      myCharacter.updateKeysPressed('r', false)
+    }
+    reportKeysPressedChange()
+  }
+} 
 
 const resetCanvas = (p5: P5): void => {
   p5.clear()
@@ -116,31 +166,26 @@ const checkExplosion = (p5: P5): void => {
   }
 }
 
-const sendPositionChangeInformation = (myCharacter: Player) => {
-  socket.emit('send position change', {
-    x: myCharacter.x,
-    y: myCharacter.y
-  })
-}
-
 // function that runs on every new frame
 const draw = (p5: P5) => () => {
   // reset canvas
   resetCanvas(p5)
 
-  // movement
-  if (p5.keyIsDown(p5.LEFT_ARROW)) {
-    myCharacter.move(DIRECTION.LEFT, () => sendPositionChangeInformation(myCharacter))
-  }
-  if (p5.keyIsDown(p5.RIGHT_ARROW)) {
-    myCharacter.move(DIRECTION.RIGHT, () => sendPositionChangeInformation(myCharacter))
-  }
-  if (p5.keyIsDown(p5.UP_ARROW)) {
-    myCharacter.move(DIRECTION.UP, () => sendPositionChangeInformation(myCharacter))
-  }
-  if (p5.keyIsDown(p5.DOWN_ARROW)) {
-    myCharacter.move(DIRECTION.DOWN, () => sendPositionChangeInformation(myCharacter))
-  }
+  // check for any movement
+  Object.values(players).forEach((player: Player) => {
+    if (player.keysPressed.u) {
+      player.move(DIRECTION.UP)
+    }
+    if (player.keysPressed.d) {
+      player.move(DIRECTION.DOWN)
+    }
+    if (player.keysPressed.l) {
+      player.move(DIRECTION.LEFT)
+    }
+    if (player.keysPressed.r) {
+      player.move(DIRECTION.RIGHT)
+    }
+  })
 
   drawBomb(p5)
   checkExplosion(p5)
@@ -155,6 +200,8 @@ export function sketch(p5: P5) {
   p5.setup = setup(p5)
   // on key press
   p5.keyPressed = keyPressed(p5)
+  // on key release
+  p5.keyReleased = keyReleased(p5)
   // funciton to run on every new frame
   p5.draw = draw(p5)
 }
