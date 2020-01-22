@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "proxy": "http://localhost:3000",
-  "homepage" : "http://uoojin1.github.io/projects/crazyarcade",
+  "homepage": "http://uoojin1.github.io/crazyarcade",
   "dependencies": {
     "@types/express": "^4.17.2",
     "@types/jest": "^24.9.0",
@@ -37,6 +37,11 @@
     "dev:ui": "PORT=3001 react-scripts-ts start",
     "dev:server": "nodemon --watch server --ext ts --exec ts-node server/index.ts",
     "eject": "react-scripts-ts eject",
-    "tsc": "tsc"
+    "tsc": "tsc",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
+  },
+  "devDependencies": {
+    "gh-pages": "^2.2.0"
   }
 }
