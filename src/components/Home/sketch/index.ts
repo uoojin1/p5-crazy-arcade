@@ -1,9 +1,10 @@
 import io from 'socket.io-client'
+import range from 'lodash/range'
 import P5 from 'p5'
-import { Constants } from './constants'
+import { Constants } from '../../../constants'
 import {
-  Player, ServerPlayerData, KeysPressed, Position, DIRECTION } from './classes/Player'
-import { Bomb } from './classes/Bomb'
+  Player, ServerPlayerData, KeysPressed, Position, DIRECTION } from '../../../classes/Player'
+import { Bomb } from '../../../classes/Bomb'
 
 // constants
 let c: Constants
@@ -35,6 +36,27 @@ type Players = {[key: string]: Player}
 
 let players: Players = {};
 
+
+type Row = (string|null)[]
+
+type GameBoard = Row[]
+
+let gameBoard: GameBoard = []
+
+let gridPoints: number[] = range(25, 500, 50)
+
+for (let i = 0; i < 10; i++) {
+  let row: Row = []
+  for (let j = 0; j < 10; j++) {
+    row.push(null)
+  }
+  gameBoard.push(row)
+  // set up grid points
+
+}
+
+console.log({ gameBoard })
+
 // set up function
 const setup = (p5: P5) => () => {
   // open socket connection
@@ -52,11 +74,11 @@ const setup = (p5: P5) => () => {
     myCharacter = new Player(p5, id, position, color, keysPressed)
     players[id] = myCharacter
     // create existing bombs
-    bombsData.forEach((bomb) => {
-      const { position, plantedTime } = bomb
-      const untilExplosion = 2500 - (Date.now() - plantedTime)
-      bombs.push(new Bomb(position.x, position.y, untilExplosion))
-    })
+    // bombsData.forEach((bomb) => {
+    //   const { position, plantedTime } = bomb
+    //   const untilExplosion = 2500 - (Date.now() - plantedTime)
+    //   bombs.push(new Bomb(position.x, position.y, untilExplosion))
+    // })
   })
 
   socket.on('new player has joined', (newPlayer: ServerPlayerData) => {
@@ -79,17 +101,17 @@ const setup = (p5: P5) => () => {
     players[data.id].syncWithServer(data.keysPressed, data.position)
   })
 
-  socket.on('bomb placed', (bomb: ServerBomb) => {
-    const untilExplosion = 2500 - (Date.now() - bomb.plantedTime)
-    bombs.push(new Bomb(bomb.position.x, bomb.position.y, untilExplosion))
-  })
+  // socket.on('bomb placed', (bomb: ServerBomb) => {
+  //   const untilExplosion = 2500 - (Date.now() - bomb.plantedTime)
+  //   bombs.push(new Bomb(bomb.position.x, bomb.position.y, untilExplosion))
+  // })
 
   // create canvas
   p5.createCanvas(...c.canvasSize)
   // set background color
   p5.background(c.backgroundColor)
   // set the framerate to 3 fps
-  p5.frameRate(40)
+  p5.frameRate(45)
 }
 
 const reportKeysPressedChange = () => {
@@ -116,15 +138,21 @@ const keyPressed = (p5: P5) => () => {
     }
     if (p5.keyCode === 32) {
       // bomb
-      console.log('bomb placing')
+      // console.log('bomb placing')
+      // @ts-ignore
       const currentTime = Date.now()
+
+      const explodingTime = Number(Math.ceil(currentTime/1000.0) * 1000.0)
+      console.log({ explodingTime: explodingTime % 10000 })
       // place the bomb on the canvas
-      bombs.push(new Bomb(myCharacter.x, myCharacter.y, 2500))
+      let bombX = gridPoints[myCharacter.gridIndex[0]]
+      let bombY = gridPoints[myCharacter.gridIndex[1]]
+      bombs.push(new Bomb(bombX, bombY, 3000 - (currentTime - explodingTime)))
       // send server this information to the server
-      socket.emit('report: bomb placed', {
-        position: myCharacter.position,
-        plantedTime: currentTime
-      })
+      // socket.emit('report: bomb placed', {
+      //   position: myCharacter.position,
+      //   plantedTime: currentTime
+      // })
     }
     reportKeysPressedChange()
   }
@@ -156,14 +184,14 @@ const resetCanvas = (p5: P5): void => {
 
 const drawBomb = (p5: P5): void => {
   p5.fill(p5.color(255, 204, 0))
-  bombs.forEach(bomb => p5.circle(bomb.x, bomb.y, 20))
+  bombs.forEach(bomb => p5.circle(bomb.x, bomb.y, 50))
 }
 
 const drawPlayers = (p5: P5): void => {
   Object.values(players).forEach((p: Player) => {
     p5.noStroke()
     p5.fill(p.color)
-    p5.circle(p.x, p.y, 30)
+    p5.circle(p.x, p.y, 50)
   })
 }
 
@@ -171,13 +199,13 @@ const checkExplosion = (p5: P5): void => {
   for (let i = 0; i < bombs.length; i++) {
     const bomb = bombs[i]
     if (bomb.isExploded === true) {
-      console.log('explosion!!!!', bomb)
+      // console.log('explosion!!!!', bomb)
       p5.fill(p5.color(255, 204, 0))
       p5.noStroke()
-      p5.ellipse(bomb.x, bomb.y, 80, 20)
-      p5.ellipse(bomb.x, bomb.y, 20, 80)
+      p5.ellipse(bomb.x, bomb.y, 200, 50)
+      p5.ellipse(bomb.x, bomb.y, 50, 200)
       bombs.shift()
-      console.log('bombs left..', bombs)
+      // console.log('bombs left..', bombs)
     } else {
       break
     }

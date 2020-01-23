@@ -1,4 +1,20 @@
 import P5 from 'p5'
+import range from 'lodash/range'
+
+let gridPoints: number[] = range(25, 500, 50)
+
+function findClosestGridPoint(position: number) {
+  let min = 9999;
+  let minIndex = 0;
+  gridPoints.forEach((point, index) => {
+    let distance = Math.abs(point - position)
+    if (min > distance) {
+      min = distance
+      minIndex = index
+    }
+  })
+  return minIndex
+}
 
 export enum DIRECTION {
   UP,
@@ -39,18 +55,23 @@ export class Player {
   private _velocity: number;
   private _color: P5.Color;
   private _keysPressed: KeysPressed;
+  public gridIndex: [number, number];
 
   constructor(p5: P5, id: string, position: Position, color: Color, keysPressed: KeysPressed) {
     this._id = id
     this._x = position.x
     this._y = position.y
-    this._velocity = 5
+    this._velocity = 8
     this._color = p5.color(
       color.r,
       color.g,
       color.g
     )
     this._keysPressed = keysPressed
+    this.gridIndex = [
+      findClosestGridPoint(position.x),
+      findClosestGridPoint(position.y)
+    ]
   }
 
   public get color(): P5.Color { return this._color }
@@ -80,16 +101,42 @@ export class Player {
 
   public move(direction: DIRECTION) {
     if (direction === DIRECTION.UP) {
-      this._y -= this._velocity
+      if (this._y > this._velocity + 1) {
+        this._y -= this._velocity
+      }
     }
     if (direction === DIRECTION.DOWN) {
-      this._y += this._velocity
+      if (this._y < 500 - (this._velocity + 1)) {
+        this._y += this._velocity
+      }
     }
     if (direction === DIRECTION.LEFT) {
-      this._x -= this._velocity
+      if (this._x > this._velocity + 1) {
+        this._x -= this._velocity
+      }
     }
     if (direction === DIRECTION.RIGHT) {
-      this._x += this._velocity
+      if (this._x < 500 - (this._velocity + 1)) {
+        this._x += this._velocity
+      }
+    }
+    this.checkGridIndexChange()
+  }
+
+  private checkGridIndexChange() {
+    // x
+    if (this._x < gridPoints[this.gridIndex[0]] - 25) {
+      this.gridIndex[0] = this.gridIndex[0] - 1
+    }
+    if (this._x > gridPoints[this.gridIndex[0]] + 25) {
+      this.gridIndex[0] = this.gridIndex[0] + 1
+    }
+    // y
+    if (this._y < gridPoints[this.gridIndex[1]] - 25) {
+      this.gridIndex[1] = this.gridIndex[1] - 1
+    }
+    if (this._y > gridPoints[this.gridIndex[1]] + 25) {
+      this.gridIndex[1] = this.gridIndex[1] + 1
     }
   }
 

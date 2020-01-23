@@ -19,6 +19,6 @@ export class Constants {
   }
 
   public get canvasSize(): [number, number] {
-    return [600, 600]
+    return [500, 500]
   }
 }

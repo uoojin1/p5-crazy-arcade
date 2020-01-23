@@ -110,8 +110,8 @@ export class GameManager {
     return {
       id,
       position: {
-        x: random(50, 550),
-        y: random(50, 550)
+        x: random(50, 450),
+        y: random(50, 450)
       },
       color: {
         r: random(0, 255),
@@ -125,6 +125,5 @@ export class GameManager {
         d: false
       }
     }
-  }
-  
+  }  
 }
