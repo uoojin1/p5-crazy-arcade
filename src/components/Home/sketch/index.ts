@@ -137,8 +137,6 @@ const keyPressed = (p5: P5) => () => {
       myCharacter.updateKeysPressed('r', true)
     }
     if (p5.keyCode === 32) {
-      // bomb
-      // console.log('bomb placing')
       // @ts-ignore
       const currentTime = Date.now()
 
